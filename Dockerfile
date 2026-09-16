@@ -1,8 +1,9 @@
-FROM python:3.9-slim
+FROM python:3.10-slim
 
-# سسٹم میں LibreOffice انسٹال کرنا
+# سسٹم میں LibreOffice اور ضروری فونٹس انسٹال کرنا
 RUN apt-get update && apt-get install -y \
     libreoffice \
+    default-jre \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -12,4 +13,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-CMD gunicorn app:app --bind 0.0.0.0:$PORT --timeout 120
+CMD gunicorn -w 2 -b 0.0.0.0:$PORT app:app
