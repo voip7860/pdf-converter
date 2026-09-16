@@ -36,7 +36,7 @@ def convert_word_to_pdf():
     
     file.save(docx_path)
     
-    # LibreOffice کے ذریعے ورڈ کو پی ڈی ایف میں تبدیل کرنا (بغیر کسی فارمیٹنگ خرابی کے)
+    # LibreOffice کے ذریعے ورڈ کو پی ڈی ایف میں تبدیل کرنا
     subprocess.run(['libreoffice', '--headless', '--convert-to', 'pdf', docx_path], check=True)
     
     if os.path.exists(pdf_path):
