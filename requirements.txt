@@ -1,5 +1,5 @@
-flask
+Flask
+flask-cors
 pdf2docx
 python-docx
 reportlab
-gunicorn
