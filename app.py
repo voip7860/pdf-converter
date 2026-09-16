@@ -1,6 +1,7 @@
 import os
 import traceback
 from flask import Flask, request, send_file
+from flask_cors import CORS
 from pdf2docx import Converter
 from docx import Document
 from reportlab.lib.pagesizes import letter
@@ -8,6 +9,7 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet
 
 app = Flask(__name__)
+CORS(app)  # یہ لائن براؤزر کے CORS (Failed to fetch) کے مسئلے کو ہمیشہ کے لیے ختم کر دے گی
 
 # آپ کا پرانا PDF سے DOCX والا روٹ (100% محفوظ ہے)
 @app.route('/convert', methods=['POST'])
