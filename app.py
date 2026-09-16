@@ -1,4 +1,5 @@
 import os
+import shutil
 import subprocess
 import traceback
 from flask import Flask, request, send_file
@@ -25,7 +26,7 @@ def convert_pdf():
     return send_file(docx_path, as_attachment=True)
 
 
-# یہ نیا روٹ ہے جو Word (.docx) کو 100% پرفیکٹ PDF میں بدلے گا (فکسڈ ورژن)
+# ورڈ سے پی ڈی ایف والا روٹ (پاتھ چیکنگ کے ساتھ)
 @app.route('/convert-word', methods=['POST'])
 def convert_word_to_pdf():
     try:
@@ -38,18 +39,23 @@ def convert_word_to_pdf():
         
         file.save(docx_path)
         
-        # Render پر LibreOffice کو چلانے کا درست اور پکا طریقہ
-        cmd = ['soffice', '--headless', '--convert-to', 'pdf', docx_path]
+        # چیک کریں کہ کیا سرور پر libreoffice یا soffice موجود ہے؟
+        soffice_bin = shutil.which('soffice') or shutil.which('libreoffice')
+        
+        if not soffice_bin:
+            return "Error: LibreOffice/Soffice is not installed or found in Render PATH. Please check Aptfile.", 500
+        
+        # ملنے پر کمانڈ چلائیں
+        cmd = [soffice_bin, '--headless', '--convert-to', 'pdf', docx_path]
         result = subprocess.run(cmd, capture_output=True, text=True)
         
         if result.returncode != 0:
-            cmd = ['libreoffice', '--headless', '--convert-to', 'pdf', docx_path]
-            result = subprocess.run(cmd, capture_output=True, text=True)
+            return f"LibreOffice execution failed: {result.stderr}", 500
         
         if os.path.exists(pdf_path):
             return send_file(pdf_path, as_attachment=True)
         else:
-            return f"Conversion failed: {result.stderr}", 500
+            return "PDF file was not generated", 500
             
     except Exception as e:
         error_details = traceback.format_exc()
