@@ -1,12 +1,9 @@
 import os
+import subprocess
 import traceback
 from flask import Flask, request, send_file
 from flask_cors import CORS
 from pdf2docx import Converter
-from docx import Document
-from reportlab.lib.pagesizes import letter
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
-from reportlab.lib.styles import getSampleStyleSheet
 
 app = Flask(__name__)
 CORS(app)
@@ -30,7 +27,7 @@ def convert_pdf():
     return send_file(docx_path, as_attachment=True)
 
 
-# Word سے PDF والا روٹ
+# Word سے PDF والا روٹ (LibreOffice کے ذریعے 100% پرفیکٹ ٹیبلز اور تصاویر کے ساتھ)
 @app.route('/convert-word', methods=['POST'])
 def convert_word_to_pdf():
     try:
@@ -38,31 +35,19 @@ def convert_word_to_pdf():
             return 'No file uploaded', 400
         
         file = request.files['file']
-        docx_path = 'temp_input.docx'
-        pdf_path = 'temp_output.pdf'
+        filename_base = os.path.splitext(file.filename)[0]
+        docx_path = f"temp_{filename_base}.docx"
+        output_dir = "/tmp"
+        pdf_path = os.path.join(output_dir, f"{filename_base}.pdf")
         
         file.save(docx_path)
         
-        # ورڈ فائل سے ٹیکسٹ نکالنا
-        doc = Document(docx_path)
-        text_lines = []
-        for para in doc.paragraphs:
-            if para.text.strip():
-                text_lines.append(para.text)
-        
-        # پی ڈی ایف بنانا
-        pdf_doc = SimpleDocTemplate(pdf_path, pagesize=letter)
-        styles = getSampleStyleSheet()
-        story = []
-        
-        for line in text_lines:
-            story.append(Paragraph(line, styles['Normal']))
-            story.append(Spacer(1, 10))
-            
-        pdf_doc.build(story)
+        # LibreOffice کے ذریعے ورڈ کو پی ڈی ایف میں بدلنے کی کمانڈ
+        cmd = ["soffice", "--headless", "--convert-to", "pdf", "--outdir", output_dir, docx_path]
+        subprocess.run(cmd, check=True)
         
         if os.path.exists(pdf_path):
-            return send_file(pdf_path, as_attachment=True)
+            return send_file(pdf_path, as_attachment=True, download_name=f"{filename_base}.pdf")
         else:
             return "PDF generation failed", 500
             
