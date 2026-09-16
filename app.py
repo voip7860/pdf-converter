@@ -4,8 +4,6 @@ from flask import Flask, request, send_file
 from flask_cors import CORS
 from pdf2docx import Converter
 from docx import Document
-from docx.text.paragraph import Paragraph as DocxParagraph
-from docx.table import Table as DocxTable
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -32,7 +30,7 @@ def convert_pdf():
     
     return send_file(docx_path, as_attachment=True)
 
-# ورڈ سے پی ڈی ایف (ٹیبلز سمیت مکمل سپورٹ)
+# ورڈ سے پی ڈی ایف (فورسڈ ٹیبل پارسنگ)
 @app.route('/convert-word', methods=['POST'])
 def convert_word_to_pdf():
     try:
@@ -50,62 +48,54 @@ def convert_word_to_pdf():
         pdf_doc = SimpleDocTemplate(
             pdf_path, 
             pagesize=letter,
-            rightMargin=30, leftMargin=30,
-            topMargin=30, bottomMargin=30
+            rightMargin=20, leftMargin=20,
+            topMargin=20, bottomMargin=20
         )
         
         styles = getSampleStyleSheet()
         normal_style = styles['Normal']
-        normal_style.fontSize = 9
-        normal_style.leading = 11
+        normal_style.fontSize = 8
+        normal_style.leading = 10
 
-        # ٹیبل کے اندر ٹیکسٹ کے لیے چھوٹا اسٹائل
-        table_cell_style = ParagraphStyle(
-            'TableCell',
+        cell_style = ParagraphStyle(
+            'CellStyle',
             parent=normal_style,
-            fontSize=8,
-            leading=10
+            fontSize=7.5,
+            leading=9
         )
         
         story = []
         
-        # ورڈ کے عناصر (پیراگراف اور ٹیبلز) کو ان کی ترتیب سے ریڈ کرنا
-        for child in doc.element.body:
-            if child.tag.endswith('p'):
-                p = DocxParagraph(child, doc)
-                if p.text.strip():
-                    story.append(Paragraph(p.text, normal_style))
-                    story.append(Spacer(1, 6))
-                    
-            elif child.tag.endswith('tbl'):
-                table = DocxTable(child, doc)
-                table_data = []
-                
-                for row in table.rows:
-                    row_data = []
-                    for cell in row.cells:
-                        # سیل کے اندر موجود پیراگراف کا ٹیکسٹ نکالنا تاکہ فارمیٹنگ نہ بگڑے
-                        cell_text = "\n".join([p.text.strip() for p in cell.paragraphs if p.text.strip()])
-                        row_data.append(Paragraph(cell_text, table_cell_style))
-                    table_data.append(row_data)
-                
-                if table_data:
-                    # لیٹر پیج کے حساب سے ٹیبل کی چوڑائی (کل سائز ~550 ہے)
-                    col_widths = [50, 250, 60, 90, 100] # ضرورت کے مطابق آٹومیٹک ایڈجस्टٹ
-                    
-                    t = Table(table_data)
-                    t.setStyle(TableStyle([
-                        ('BOX', (0,0), (-1,-1), 1, colors.HexColor('#4A5568')),
-                        ('INNERGRID', (0,0), (-1,-1), 0.5, colors.HexColor('#CBD5E0')),
-                        ('VALIGN', (0,0), (-1,-1), 'TOP'),
-                        ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#EDF2F7')), # ہیڈر رو کا کلر
-                        ('BOTTOMPADDING', (0,0), (-1,-1), 4),
-                        ('TOPPADDING', (0,0), (-1,-1), 4),
-                        ('LEFTPADDING', (0,0), (-1,-1), 4),
-                        ('RIGHTPADDING', (0,0), (-1,-1), 4),
-                    ]))
-                    story.append(t)
-                    story.append(Spacer(1, 8))
+        # ورڈ کے تمام ٹیبلز اور پیراگراف کو نکالنے کا حتمی طریقہ
+        for table in doc.tables:
+            table_data = []
+            for row in table.rows:
+                row_data = []
+                for cell in row.cells:
+                    cell_text = "\n".join([p.text.strip() for p in cell.paragraphs if p.text.strip()])
+                    row_data.append(Paragraph(cell_text, cell_style))
+                table_data.append(row_data)
+            
+            if table_data:
+                t = Table(table_data)
+                t.setStyle(TableStyle([
+                    ('BOX', (0,0), (-1,-1), 0.5, colors.HexColor('#2D3748')),
+                    ('INNERGRID', (0,0), (-1,-1), 0.25, colors.HexColor('#CBD5E0')),
+                    ('VALIGN', (0,0), (-1,-1), 'TOP'),
+                    ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#EDF2F7')),
+                    ('BOTTOMPADDING', (0,0), (-1,-1), 3),
+                    ('TOPPADDING', (0,0), (-1,-1), 3),
+                    ('LEFTPADDING', (0,0), (-1,-1), 3),
+                    ('RIGHTPADDING', (0,0), (-1,-1), 3),
+                ]))
+                story.append(t)
+                story.append(Spacer(1, 8))
+
+        # اگر فائل میں الگ سے بھی پیراگراف ہوں
+        for p in doc.paragraphs:
+            if p.text.strip():
+                story.append(Paragraph(p.text, normal_style))
+                story.append(Spacer(1, 4))
             
         pdf_doc.build(story)
         
