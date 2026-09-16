@@ -28,7 +28,7 @@ def convert_pdf():
     return send_file(docx_path, as_attachment=True)
 
 
-# ورڈ سے پی ڈی ایف والا روٹ (خالص پائथन کے ذریعے بغیر کسی LibreOffice کے)
+# ورڈ سے پی ڈی ایف والا روٹ (خالص پائथन کے ذریعے)
 @app.route('/convert-word', methods=['POST'])
 def convert_word_to_pdf():
     try:
@@ -48,7 +48,7 @@ def convert_word_to_pdf():
             if para.text.strip():
                 text_lines.append(para.text)
         
-        # ReportLab سے صاف ستھری پی ڈی ایف بنانا
+        # صاف ستھری پی ڈی ایف بنانا
         pdf_doc = SimpleDocTemplate(pdf_path, pagesize=letter)
         styles = getSampleStyleSheet()
         story = []
